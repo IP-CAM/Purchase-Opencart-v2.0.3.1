@@ -1,0 +1,1275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>Compra de Créditos por la Tienda</name>
+    <version>1.0</version>
+    <author>Tecniservicio 3000 C.A.</author>
+    <code>tscp</code>
+    <link>http://www.opencart.com</link>
+    <file path="catalog/controller/common/cart.php">
+        <operation>
+            <search><![CDATA[
+            $data['text_items'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total));
+            ]]></search>
+            <add position="Replace"><![CDATA[
+            $data['text_items'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0) + (isset($this->session->data['credits']) ? count($this->session->data['credits']) : 0), $this->currency->format($total));
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+              $data['totals'] = array();
+            ]]></search>
+            <add position="before"><![CDATA[
+              // Credits
+          		$data['credits'] = array();
+
+          		if (!empty($this->session->data['credits'])) {
+          			foreach ($this->session->data['credits'] as $key => $credits) {
+          				$data['credits'][] = array(
+          					'key'         => $key,
+          					'description' => $credits['description'],
+          					'amount'      => $this->currency->format($credits['amount'])
+          				);
+          			}
+          		}
+
+            ]]></add>
+        </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/common/cart.tpl">
+      <operation>
+          <search><![CDATA[
+              <?php if ($products || $vouchers) { ?>
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              <?php if ($products || $vouchers || $credits) { ?>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            <td class="text-center text-danger"><button type="button" onclick="voucher.remove('<?php echo $voucher['key']; ?>');" title="<?php echo $button_remove; ?>" class="btn btn-danger btn-xs"><i class="fa fa-times"></i></button></td>
+          ]]></search>
+          <add position="after"><![CDATA[
+          </tr>
+          <?php } ?>
+          <?php foreach ($credits as $credit) { ?>
+          <tr>
+            <td class="text-center"></td>
+            <td class="text-left"><?php echo $credit['description']; ?></td>
+            <td class="text-right">x&nbsp;1</td>
+            <td class="text-right"><?php echo $credit['amount']; ?></td>
+            <td class="text-center text-danger"><button type="button" onclick="credit.remove('<?php echo $credit['key']; ?>');" title="<?php echo $button_remove; ?>" class="btn btn-danger btn-xs"><i class="fa fa-times"></i></button></td>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/checkout/cart.php">
+      <operation>
+          <search><![CDATA[
+              if ($this->cart->hasProducts() || !empty($this->session->data['vouchers'])) {
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ($this->cart->hasProducts() || !empty($this->session->data['vouchers']) || !empty($this->session->data['credits'])) {
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            // Gift Voucher
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credits
+      			$data['credits'] = array();
+
+      			if (!empty($this->session->data['credits'])) {
+      				foreach ($this->session->data['credits'] as $key => $credit) {
+      					$data['credits'][] = array(
+      						'key'         => $key,
+      						'description' => $credit['description'],
+      						'amount'      => $this->currency->format($credit['amount']),
+      						'remove'      => $this->url->link('checkout/cart', 'remove=' . $key)
+      					);
+      				}
+      			}
+
+          ]]></add>
+      </operation>
+      <operation>
+        <search><![CDATA[
+            $data['voucher'] = $this->load->controller('checkout/voucher');
+          ]]></search>
+        <add position="after"><![CDATA[
+            $data['credit'] = $this->load->controller('checkout/credit');
+        ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $json['total'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total));
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              $json['total'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0) + (isset($this->session->data['credits']) ? count($this->session->data['credits']) : 0), $this->currency->format($total));
+          ]]></add>
+        </operation>
+        <operation>
+          <search><![CDATA[
+              unset($this->session->data['vouchers'][$this->request->post['key']]);
+            ]]></search>
+          <add position="after"><![CDATA[
+              unset($this->session->data['credits'][$this->request->post['key']]);
+          ]]></add>
+        </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/checkout/cart.tpl">
+      <operation>
+          <search><![CDATA[
+              </tbody>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php foreach ($credits as $credit) { ?>
+            <tr>
+              <td></td>
+              <td class="text-left"><?php echo $credit['description']; ?></td>
+              <td class="text-left"></td>
+              <td class="text-left"><div class="input-group btn-block" style="max-width: 200px;">
+                  <input type="text" name="" value="1" size="1" disabled="disabled" class="form-control" />
+                  <span class="input-group-btn"><button type="button" data-toggle="tooltip" title="<?php echo $button_remove; ?>" class="btn btn-danger" onclick="credit.remove('<?php echo $credit['key']; ?>');"><i class="fa fa-times-circle"></i></button></span></div></td>
+              <td class="text-right"><?php echo $credit['amount']; ?></td>
+              <td class="text-right"><?php echo $credit['amount']; ?></td>
+            </tr>
+            <?php } ?>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              <?php if ($coupon || $voucher || $reward || $shipping) { ?>
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              <?php if ($coupon || $voucher || $reward || $shipping || $credit) { ?>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              <div class="panel-group" id="accordion"><?php echo $coupon; ?><?php echo $voucher; ?><?php echo $reward; ?><?php echo $shipping; ?></div>
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              <div class="panel-group" id="accordion"><?php echo $coupon; ?><?php echo $voucher; ?><?php echo $credit; ?><?php echo $reward; ?><?php echo $shipping; ?></div>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/api/cart.php">
+      <operation>
+          <search><![CDATA[
+              unset($this->session->data['vouchers'][$this->request->post['key']]);
+          ]]></search>
+          <add position="after"><![CDATA[
+              unset($this->session->data['credits'][$this->request->post['key']]);
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            // Totals
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credit
+        		$json['credits'] = array();
+        		if (!empty($this->session->data['credits'])) {
+          			foreach ($this->session->data['credits'] as $key => $credit) {
+            				$json['credits'][] = array(
+                        'code'             => $credit['code'],
+                				'description'      => $credit['description'],
+                				'amount'           => $this->currency->format($credit['amount'])
+            				);
+          			}
+        		}
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/api/order.php">
+      <operation>
+          <search><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers']) && empty($this->session->data['credits'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              // Order Totals
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credits
+            $order_data['credits'] = array();
+
+            if (!empty($this->session->data['credits'])) {
+                    foreach ($this->session->data['credits'] as $credit) {
+                            $order_data['credits'][] = array(
+                                    'code'             => substr(md5(mt_rand()), 0, 10),
+                                    'description'      => $credit['description'],
+                                    'amount'           => $credit['amount']
+                            );
+                    }
+            }
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $this->model_checkout_order->addOrderHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify']);
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ($this->request->post['order_status_id'] == 5){
+                    $this->model_checkout_order->addOrderHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify']);
+
+                    $this->load->model('checkout/credit');
+                    $credit_info = $this->model_checkout_credit->getOrderCredit($order_id);
+
+                    if ($credit_info){
+                        foreach($credit_info as $credit){
+                            $this->model_checkout_credit->addTransaction($order_info['customer_id'],"Compra de Créditos",$credit['amount'],$order_id,$credit['credit_id']);
+                        }
+                    }
+                }else{
+                    $this->load->model('checkout/credit');
+
+                    $credit_info = $this->model_checkout_credit->getOrderCredit($order_id);
+
+                    if($credit_info){
+                        foreach($credit_info as $credit){
+                            $this->model_checkout_credit->deleteTransaction($credit['credit_id']);
+                        }
+                    }
+
+                }
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/checkout/checkout.php">
+      <operation>
+          <search><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers']) && empty($this->session->data['credits'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/checkout/confirm.php">
+      <operation>
+          <search><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers']) && empty($this->session->data['credits'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $order_data['comment'] = $this->session->data['comment'];
+          ]]></search>
+          <add position="before"><![CDATA[
+            $order_data['credits'] = array();
+
+            if (!empty($this->session->data['credits'])) {
+                foreach ($this->session->data['credits'] as $credit) {
+                    $order_data['credits'][] = array(
+                        'code'             => substr(md5(mt_rand()), 0, 10),
+                        'description'      => $credit['description'],
+                        'amount'           => $credit['amount']
+                    );
+                }
+            }
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['totals'] = array();
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credits
+          	$data['credits'] = array();
+
+          	if (!empty($this->session->data['credits'])) {
+          		foreach ($this->session->data['credits'] as $credit) {
+          			$data['credits'][] = array(
+          				'description' => $credit['description'],
+          				'amount'      => $this->currency->format($credit['amount'])
+          			);
+          		}
+          	}
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/checkout/*.php">
+      <operation>
+          <search><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers']) && empty($this->session->data['credits'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/checkout/success.php">
+      <operation>
+          <search><![CDATA[
+              unset($this->session->data['vouchers']);
+          ]]></search>
+          <add position="after"><![CDATA[
+              unset($this->session->data['credit']);
+              unset($this->session->data['credits']);
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/model/total/sub_total.php">
+      <operation>
+          <search><![CDATA[
+            $total_data[] = array(
+          ]]></search>
+          <add position="before"><![CDATA[
+            if (isset($this->session->data['credits']) && $this->session->data['credits']) {
+        			foreach ($this->session->data['credits'] as $credit) {
+        				$sub_total += $credit['amount'];
+        			}
+        		}
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/account/order_info.tpl">
+      <operation>
+          <search><![CDATA[
+            <?php foreach ($vouchers as $voucher) { ?>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php foreach ($credits as $credit) { ?>
+              <tr>
+                <td class="text-left"><?php echo $credit['description']; ?></td>
+                <td class="text-left"></td>
+                <td class="text-right">1</td>
+                <td class="text-right"><?php echo $credit['amount']; ?></td>
+                <td class="text-right"><?php echo $credit['amount']; ?></td>
+                <?php if ($products) { ?>
+                <td></td>
+                <?php } ?>
+              </tr>
+            <?php } ?>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/checkout/confirm.tpl">
+      <operation>
+          <search><![CDATA[
+            <?php foreach ($vouchers as $voucher) { ?>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php foreach ($credits as $credit) { ?>
+            <tr>
+              <td class="text-left"><?php echo $credit['description']; ?></td>
+              <td class="text-left"></td>
+              <td class="text-right">1</td>
+              <td class="text-right"><?php echo $credit['amount']; ?></td>
+              <td class="text-right"><?php echo $credit['amount']; ?></td>
+            </tr>
+            <?php } ?>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/mail/order.tpl">
+      <operation>
+          <search><![CDATA[
+            <?php foreach ($vouchers as $voucher) { ?>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php foreach ($credits as $credit) { ?>
+            <tr>
+              <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: left; padding: 7px;"><?php echo $credit['description']; ?></td>
+              <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: left; padding: 7px;"></td>
+              <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: right; padding: 7px;">1</td>
+              <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: right; padding: 7px;"><?php echo $credit['amount']; ?></td>
+              <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: right; padding: 7px;"><?php echo $credit['amount']; ?></td>
+            </tr>
+            <?php } ?>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/account/*.php">
+      <operation>
+          <search><![CDATA[
+              unset($this->session->data['vouchers']);
+          ]]></search>
+          <add position="after"><![CDATA[
+            unset($this->session->data['credit']);
+            unset($this->session->data['credits']);
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/account/order.php">
+      <operation>
+          <search><![CDATA[
+              $voucher_total = $this->model_account_order->getTotalOrderVouchersByOrderId($result['order_id']);
+          ]]></search>
+          <add position="after"><![CDATA[
+              $credit_total = $this->model_account_order->getTotalOrderCreditsByOrderId($result['order_id']);
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              'products'   => ($product_total + $voucher_total),
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              'products'   => ($product_total + $voucher_total + $credit_total),
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            // Totals
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credit
+        		$data['credits'] = array();
+
+        		$credits = $this->model_account_order->getOrderCredits($this->request->get['order_id']);
+
+        		foreach ($credits as $credit) {
+        			$data['credits'][] = array(
+        				'description' => $credit['description'],
+        				'amount'      => $this->currency->format($credit['amount'], $order_info['currency_code'], $order_info['currency_value'])
+        			);
+        		}
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/model/account/order.php">
+      <operation>
+          <search><![CDATA[
+            public function getOrderVouchers($order_id) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            public function getOrderCredits($order_id) {
+          		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "credit` WHERE order_id = '" . (int)$order_id . "'");
+
+          		return $query->rows;
+          	}
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            public function getTotalOrderVouchersByOrderId($order_id) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            public function getTotalOrderCreditsByOrderId($order_id) {
+          		$query = $this->db->query("SELECT COUNT(*) AS total FROM `" . DB_PREFIX . "credit` WHERE order_id = '" . (int)$order_id . "'");
+
+          		return $query->row['total'];
+          	}
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/model/checkout/order.php">
+      <operation>
+          <search><![CDATA[
+              $this->db->query("INSERT INTO `" . DB_PREFIX . "order` SET invoice_prefix = '" . $this->db->escape($data['invoice_prefix']) . "', store_id = '" . (int)$data['store_id'] . "', store_name = '" . $this->db->escape($data['store_name']) . "', store_url = '" . $this->db->escape($data['store_url']) . "', customer_id = '" . (int)$data['customer_id'] . "', customer_group_id = '" . (int)$data['customer_group_id'] . "', firstname = '" . $this->db->escape($data['firstname']) . "', lastname = '" . $this->db->escape($data['lastname']) . "', email = '" . $this->db->escape($data['email']) . "', telephone = '" . $this->db->escape($data['telephone']) . "', fax = '" . $this->db->escape($data['fax']) . "', custom_field = '" . $this->db->escape(isset($data['custom_field']) ? serialize($data['custom_field']) : '') . "', payment_firstname = '" . $this->db->escape($data['payment_firstname']) . "', payment_lastname = '" . $this->db->escape($data['payment_lastname']) . "', payment_company = '" . $this->db->escape($data['payment_company']) . "', payment_address_1 = '" . $this->db->escape($data['payment_address_1']) . "', payment_address_2 = '" . $this->db->escape($data['payment_address_2']) . "', payment_city = '" . $this->db->escape($data['payment_city']) . "', payment_postcode = '" . $this->db->escape($data['payment_postcode']) . "', payment_country = '" . $this->db->escape($data['payment_country']) . "', payment_country_id = '" . (int)$data['payment_country_id'] . "', payment_zone = '" . $this->db->escape($data['payment_zone']) . "', payment_zone_id = '" . (int)$data['payment_zone_id'] . "', payment_address_format = '" . $this->db->escape($data['payment_address_format']) . "', payment_custom_field = '" . $this->db->escape(isset($data['payment_custom_field']) ? serialize($data['payment_custom_field']) : '') . "', payment_method = '" . $this->db->escape($data['payment_method']) . "', payment_code = '" . $this->db->escape($data['payment_code']) . "', shipping_firstname = '" . $this->db->escape($data['shipping_firstname']) . "', shipping_lastname = '" . $this->db->escape($data['shipping_lastname']) . "', shipping_company = '" . $this->db->escape($data['shipping_company']) . "', shipping_address_1 = '" . $this->db->escape($data['shipping_address_1']) . "', shipping_address_2 = '" . $this->db->escape($data['shipping_address_2']) . "', shipping_city = '" . $this->db->escape($data['shipping_city']) . "', shipping_postcode = '" . $this->db->escape($data['shipping_postcode']) . "', shipping_country = '" . $this->db->escape($data['shipping_country']) . "', shipping_country_id = '" . (int)$data['shipping_country_id'] . "', shipping_zone = '" . $this->db->escape($data['shipping_zone']) . "', shipping_zone_id = '" . (int)$data['shipping_zone_id'] . "', shipping_address_format = '" . $this->db->escape($data['shipping_address_format']) . "', shipping_custom_field = '" . $this->db->escape(isset($data['shipping_custom_field']) ? serialize($data['shipping_custom_field']) : '') . "', shipping_method = '" . $this->db->escape($data['shipping_method']) . "', shipping_code = '" . $this->db->escape($data['shipping_code']) . "', comment = '" . $this->db->escape($data['comment']) . "', total = '" . (float)$data['total'] . "', affiliate_id = '" . (int)$data['affiliate_id'] . "', commission = '" . (float)$data['commission'] . "', marketing_id = '" . (int)$data['marketing_id'] . "', tracking = '" . $this->db->escape($data['tracking']) . "', language_id = '" . (int)$data['language_id'] . "', currency_id = '" . (int)$data['currency_id'] . "', currency_code = '" . $this->db->escape($data['currency_code']) . "', currency_value = '" . (float)$data['currency_value'] . "', ip = '" . $this->db->escape($data['ip']) . "', forwarded_ip = '" .  $this->db->escape($data['forwarded_ip']) . "', user_agent = '" . $this->db->escape($data['user_agent']) . "', accept_language = '" . $this->db->escape($data['accept_language']) . "', date_added = NOW(), date_modified = NOW()");
+          ]]></search>
+          <add position="after"><![CDATA[
+              $customer_id = (int)$data['customer_id'];
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $this->db->query("UPDATE `" . DB_PREFIX . "order` SET invoice_prefix = '" . $this->db->escape($data['invoice_prefix']) . "', store_id = '" . (int)$data['store_id'] . "', store_name = '" . $this->db->escape($data['store_name']) . "', store_url = '" . $this->db->escape($data['store_url']) . "', customer_id = '" . (int)$data['customer_id'] . "', customer_group_id = '" . (int)$data['customer_group_id'] . "', firstname = '" . $this->db->escape($data['firstname']) . "', lastname = '" . $this->db->escape($data['lastname']) . "', email = '" . $this->db->escape($data['email']) . "', telephone = '" . $this->db->escape($data['telephone']) . "', fax = '" . $this->db->escape($data['fax']) . "', custom_field = '" . $this->db->escape(serialize($data['custom_field'])) . "', payment_firstname = '" . $this->db->escape($data['payment_firstname']) . "', payment_lastname = '" . $this->db->escape($data['payment_lastname']) . "', payment_company = '" . $this->db->escape($data['payment_company']) . "', payment_address_1 = '" . $this->db->escape($data['payment_address_1']) . "', payment_address_2 = '" . $this->db->escape($data['payment_address_2']) . "', payment_city = '" . $this->db->escape($data['payment_city']) . "', payment_postcode = '" . $this->db->escape($data['payment_postcode']) . "', payment_country = '" . $this->db->escape($data['payment_country']) . "', payment_country_id = '" . (int)$data['payment_country_id'] . "', payment_zone = '" . $this->db->escape($data['payment_zone']) . "', payment_zone_id = '" . (int)$data['payment_zone_id'] . "', payment_address_format = '" . $this->db->escape($data['payment_address_format']) . "', payment_custom_field = '" . $this->db->escape(serialize($data['payment_custom_field'])) . "', payment_method = '" . $this->db->escape($data['payment_method']) . "', payment_code = '" . $this->db->escape($data['payment_code']) . "', shipping_firstname = '" . $this->db->escape($data['shipping_firstname']) . "', shipping_lastname = '" . $this->db->escape($data['shipping_lastname']) . "', shipping_company = '" . $this->db->escape($data['shipping_company']) . "', shipping_address_1 = '" . $this->db->escape($data['shipping_address_1']) . "', shipping_address_2 = '" . $this->db->escape($data['shipping_address_2']) . "', shipping_city = '" . $this->db->escape($data['shipping_city']) . "', shipping_postcode = '" . $this->db->escape($data['shipping_postcode']) . "', shipping_country = '" . $this->db->escape($data['shipping_country']) . "', shipping_country_id = '" . (int)$data['shipping_country_id'] . "', shipping_zone = '" . $this->db->escape($data['shipping_zone']) . "', shipping_zone_id = '" . (int)$data['shipping_zone_id'] . "', shipping_address_format = '" . $this->db->escape($data['shipping_address_format']) . "', shipping_custom_field = '" . $this->db->escape(serialize($data['shipping_custom_field'])) . "', shipping_method = '" . $this->db->escape($data['shipping_method']) . "', shipping_code = '" . $this->db->escape($data['shipping_code']) . "', comment = '" . $this->db->escape($data['comment']) . "', total = '" . (float)$data['total'] . "', affiliate_id = '" . (int)$data['affiliate_id'] . "', commission = '" . (float)$data['commission'] . "', date_modified = NOW() WHERE order_id = '" . (int)$order_id . "'");
+          ]]></search>
+          <add position="after"><![CDATA[
+              $customer_id = (int)$data['customer_id'];
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            // Totals
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credits Purchase
+        		$this->load->model('checkout/credit');
+            $this->db->query("DELETE FROM ". DB_PREFIX . "credit WHERE order_id = '" . (int)$order_id. "'");
+            $this->db->query("DELETE FROM ". DB_PREFIX . "customer_transaction WHERE order_id = '" . (int)$order_id. "'");
+
+        		// Credits
+        		if (isset($data['credits'])) {
+        			foreach ($data['credits'] as $credit) {
+
+        				$credit_id = $this->model_checkout_credit->addCredit($order_id, $credit,$customer_id);
+
+        			}
+        		}
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $this->db->query("DELETE FROM `" . DB_PREFIX . "order_voucher` WHERE order_id = '" . (int)$order_id . "'");
+          ]]></search>
+          <add position="after"><![CDATA[
+              $this->db->query("DELETE FROM `" . DB_PREFIX . "credit` WHERE order_id = '" . (int)$order_id . "'");
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            // Order Totals
+          ]]></search>
+          <add position="before"><![CDATA[
+            // Credits
+    				$data['credits'] = array();
+
+    				$credit_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "credit WHERE order_id = '" . (int)$order_id . "'");
+
+                                    $this->load->language('account/credit');
+    				foreach ($credit_query->rows as $credit) {
+    					$data['credits'][] = array(
+    						'description' => $this->language->get('text_for'),
+    						'amount'      => $this->currency->format($credit['amount'], $order_info['currency_code'], $order_info['currency_value']),
+    					);
+    				}
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $text .= $language->get('text_new_order_total') . "\n";
+          ]]></search>
+          <add position="before"><![CDATA[
+            foreach ($credit_query->rows as $credit) {
+						      $text .= '1x ' . $credit['description'] . ' ' . $this->currency->format($credit['amount'], $order_info['currency_code'], $order_info['currency_value']);
+					  }
+
+            $text .= "\n";
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/controller/sale/order.php">
+      <operation>
+          <search><![CDATA[
+              $data['text_voucher'] = $this->language->get('text_voucher');
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['text_credit'] = $this->language->get('text_credit');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['entry_voucher'] = $this->language->get('entry_voucher');
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['entry_credit'] = $this->language->get('entry_credit');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['button_voucher_add'] = $this->language->get('button_voucher_add');
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['button_credit_add'] = $this->language->get('button_credit_add');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['tab_voucher'] = $this->language->get('tab_voucher');
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['tab_credit'] = $this->language->get('tab_credit');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['order_vouchers'] = $this->model_sale_order->getOrderVouchers($this->request->get['order_id']);
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['order_credits'] = $this->model_sale_order->getOrderCredits($this->request->get['order_id']);
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['voucher'] = '';
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['credit'] = '';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              if ($order_total['code'] == 'reward') {
+          ]]></search>
+          <add position="before"><![CDATA[
+            if ($order_total['code'] == 'credit') {
+                $data['credit'] = substr($order_total['title'], $start, $end - $start);
+            }
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['order_vouchers'] = array();
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['order_credits'] = array();
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['voucher_min'] = $this->config->get('config_voucher_min');
+          ]]></search>
+          <add position="after"><![CDATA[
+              $data['credit_min'] = $this->config->get('config_credit_min');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $data['totals'] = array();
+          ]]></search>
+          <add position="before"><![CDATA[
+            $data['credits'] = array();
+
+            $credits = $this->model_sale_order->getOrderCredits($this->request->get['order_id']);
+
+            foreach ($credits as $credit) {
+              $data['credits'][] = array(
+                'credit_id'   => $credit['credit_id'],
+                'description' => $credit['description'],
+                'amount'      => $this->currency->format($credit['amount'], $order_info['currency_code'], $order_info['currency_value']),
+              );
+            }
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $total_data = array();
+          ]]></search>
+          <add position="before"><![CDATA[
+            $credit_data = array();
+
+            $credits = $this->model_sale_order->getOrderCredits($order_id);
+
+            foreach ($credits as $credit) {
+              $credit_data[] = array(
+                'description' => $credit['description'],
+                'amount'      => $this->currency->format($credit['amount'], $order_info['currency_code'], $order_info['currency_value'])
+              );
+            }
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              'voucher'            => $voucher_data,
+          ]]></search>
+          <add position="after"><![CDATA[
+              'credit'             => $credit_data,
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/view/template/sale/order_info.tpl">
+      <operation>
+          <search><![CDATA[
+              <?php foreach ($totals as $total) { ?>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php foreach ($credits as $credit) { ?>
+              <tr>
+                <td class="text-left"><?php echo $credit['description']; ?></td>
+                <td class="text-left"></td>
+                <td class="text-right">1</td>
+                <td class="text-right"><?php echo $credit['amount']; ?></td>
+                <td class="text-right"><?php echo $credit['amount']; ?></td>
+              </tr>
+              <?php } ?>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/spanish/sale/order.php">
+      <operation>
+          <search><![CDATA[
+              $_['text_voucher']                            = 'Adicionar Certificado(s)';
+          ]]></search>
+          <add position="after"><![CDATA[
+              $_['text_credit']                             = 'Adicionar Créditos';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $_['entry_voucher']                           = 'Certificado de Regalo:';
+          ]]></search>
+          <add position="after"><![CDATA[
+              $_['entry_credit']                            = 'Créditos:';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/english/sale/order.php">
+      <operation>
+          <search><![CDATA[
+              $_['text_voucher']             = 'Add Voucher(s)';
+          ]]></search>
+          <add position="after"><![CDATA[
+              $_['text_credit']              = 'Add Credit(s)';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $_['entry_voucher']            = 'Voucher';
+          ]]></search>
+          <add position="after"><![CDATA[
+              $_['entry_credit']             = 'Credit:';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/model/sale/order.php">
+      <operation>
+          <search><![CDATA[
+              public function getOrderVoucherByVoucherId($voucher_id) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            public function getOrderCredits($order_id) {
+              $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "credit WHERE order_id = '" . (int)$order_id . "'");
+
+              return $query->rows;
+            }
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              public function getOrderTotals($order_id) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            public function getOrderCreditByCreditId($credit_id) {
+              $query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "credit` WHERE credit_id = '" . (int)$credit_id . "'");
+
+              return $query->row;
+            }
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/view/template/sale/order_form.tpl">
+      <operation>
+          <search><![CDATA[
+              <?php if ($order_products || $order_vouchers) { ?>
+          ]]></search>
+          <add position="Replace"><![CDATA[
+              <?php if ($order_products || $order_vouchers || $order_credits) { ?>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              <?php foreach ($order_vouchers as $order_voucher) { ?>
+          ]]></search>
+          <add position="before"><![CDATA[
+            <?php $credit_row = 0; ?>
+            <?php foreach ($order_credits as $order_credit) { ?>
+            <tr>
+              <td class="text-left"><?php echo $order_credit['description']; ?>
+                <input type="hidden" name="credit[<?php echo $credit_row; ?>][code]" value="<?php echo $order_credit['code']; ?>" />
+                <input type="hidden" name="credit[<?php echo $credit_row; ?>][credit_id]" value="<?php echo $order_credit['credit_id']; ?>" />
+                <input type="hidden" name="credit[<?php echo $credit_row; ?>][description]" value="<?php echo $order_credit['description']; ?>" />
+                <input type="hidden" name="credit[<?php echo $credit_row; ?>][amount]" value="<?php echo $order_credit['amount']; ?>" /></td>
+              <td class="text-left"></td>
+              <td class="text-right">1</td>
+              <td class="text-right"></td>
+              <td class="text-right"></td>
+              <td class="text-center"></td>
+            </tr>
+            <?php $credit_row++; ?>
+            <?php } ?>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              <button type="button" id="button-voucher-add" data-loading-text="<?php echo $text_loading; ?>" class="btn btn-primary"><i class="fa fa-plus-circle"></i> <?php echo $button_voucher_add; ?></button>
+          ]]></search>
+          <add position="after"><![CDATA[
+          </div>
+        </div>
+          <div class="tab-pane" id="tab-credit">
+              <fieldset>
+                  <div class="form-group required">
+                    <label class="col-sm-2 control-label" for="input-amount"><?php echo $entry_amount; ?></label>
+                    <div class="col-sm-10">
+                      <input type="text" name="amount" value="<?php echo $credit_min; ?>" id="input-amount" class="form-control" />
+                    </div>
+                  </div>
+              </fieldset>
+              <div class="text-right">
+                <button type="button" id="button-credit-add" data-loading-text="<?php echo $text_loading; ?>" class="btn btn-primary"><i class="fa fa-plus-circle"></i> <?php echo $button_credit_add; ?></button>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              <li><a href="#tab-voucher" data-toggle="tab"><?php echo $tab_voucher; ?></a></li>
+          ]]></search>
+          <add position="after"><![CDATA[
+              <li><a href="#tab-credit" data-toggle="tab"><?php echo $tab_credit; ?></a></li>
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              if (json['products'] == '' && json['vouchers'] == '') {
+          ]]></search>
+          <add position="replace"><![CDATA[
+              if (json['products'] == '' && json['vouchers'] == '' && json['credits'] == '') {
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              if (json['products'] == '' && json['vouchers'] ==
+          ]]></search>
+          <add position="before"><![CDATA[
+              if (json['credits']) {
+                for (i in json['credits']) {
+                  credit = json['credits'][i];
+
+                  html += '<tr>';
+                  html += '  <td class="text-left">' + credit['description'];
+                                                html += '    <input type="hidden" name="credit[' + i + '][amount]" value="' + credit['amount'] + '" />';
+                  html += '  </td>';
+                  html += '  <td class="text-left"></td>';
+                  html += '  <td class="text-right">1</td>';
+                  html += '  <td class="text-right">' + credit['amount'] + '</td>';
+                  html += '  <td class="text-right">' + credit['amount'] + '</td>';
+                  html += '  <td class="text-center" style="width: 3px;"><button type="button" value="' + credit['code'] + '" data-toggle="tooltip" title="<?php echo $button_remove; ?>" data-loading-text="<?php echo $text_loading; ?>" class="btn btn-danger"><i class="fa fa-minus-circle"></i></button></td>';
+                  html += '</tr>';
+                }
+              }
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              if (json['totals']) {
+          ]]></search>
+          <add position="before"><![CDATA[
+              if (json['credits']) {
+                for (i in json['credits']) {
+                credit = json['credits'][i];
+
+                  html += '<tr>';
+                  html += '  <td class="text-left">' + credit['description'] + '</td>';
+                  html += '  <td class="text-left"></td>';
+                  html += '  <td class="text-right">1</td>';
+                  html += '  <td class="text-right">' + credit['amount'] + '</td>';
+                  html += '  <td class="text-right">' + credit['amount'] + '</td>';
+                  html += '</tr>';
+                }
+              }
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              if (!json['totals'] && !json['products'] && !json['vouchers']) {
+          ]]></search>
+          <add position="replace"><![CDATA[
+              if (!json['totals'] && !json['products'] && !json['vouchers'] && !json['credits']) {
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              data: $('#cart input[name^=\'voucher\'][type=\'text\'], #cart input[name^=\'voucher\'][type=\'hidden\'], #cart input[name^=\'voucher\'][type=\'radio\']:checked, #cart input[name^=\'voucher\'][type=\'checkbox\']:checked, #cart select[name^=\'voucher\'], #cart textarea[name^=\'voucher\']'),
+          ]]></search>
+          <add position="before" offset="4"><![CDATA[
+              $.ajax({
+                url: 'index.php?route=sale/order/api&token=<?php echo $token; ?>&api=api/credit/add&store_id=' + $('select[name=\'store_id\'] option:selected').val(),
+                type: 'post',
+                data: $('#cart input[name^=\'credit\'][type=\'text\'], #cart input[name^=\'credit\'][type=\'hidden\'], #cart input[name^=\'credit\'][type=\'radio\']:checked, #cart input[name^=\'credit\'][type=\'checkbox\']:checked, #cart select[name^=\'credit\'], #cart textarea[name^=\'credit\']'),
+                dataType: 'json',
+                beforeSend: function() {
+                  $('#button-credit-add').button('loading');
+                },
+                complete: function() {
+                  $('#button-credit-add').button('reset');
+                },
+                success: function(json) {
+                  $('.alert, .text-danger').remove();
+                  $('.form-group').removeClass('has-error');
+
+                  if (json['error'] && json['error']['warning']) {
+                    $('#content > .container-fluid').prepend('<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' + json['error']['warning'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+                  }
+                },
+                error: function(xhr, ajaxOptions, thrownError) {
+                  alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+                }
+              });
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              $('#tab-cart').delegate('.btn-danger', 'click', function() {
+          ]]></search>
+          <add position="before"><![CDATA[
+              //Credit
+              $('#button-credit-add').on('click', function() {
+                $.ajax({
+                  url: 'index.php?route=sale/order/api&token=<?php echo $token; ?>&api=api/credit/add&store_id=' + $('select[name=\'store_id\'] option:selected').val(),
+                  type: 'post',
+                  data: $('#tab-credit input[type=\'text\'], #tab-credit input[type=\'hidden\'], #tab-credit input[type=\'radio\']:checked, #tab-credit input[type=\'checkbox\']:checked, #tab-credit select, #tab-credit textarea'),
+                  dataType: 'json',
+                  beforeSend: function() {
+                    $('#button-credit-add').button('loading');
+                  },
+                  complete: function() {
+                    $('#button-credit-add').button('reset');
+                  },
+                  success: function(json) {
+                    $('.alert, .text-danger').remove();
+                    $('.form-group').removeClass('has-error');
+
+                    if (json['error']) {
+                      if (json['error']['warning']) {
+                        $('#content > .container-fluid').prepend('<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' + json['error']['warning'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+                      }
+
+                      for (i in json['error']) {
+                        var element = $('#tab-credit #input-' + i.replace('_', '-'));
+
+                        if (element.parent().hasClass('input-group')) {
+                          $(element).parent().after('<div class="text-danger">' + json['error'][i] + '</div>');
+                        } else {
+                          $(element).after('<div class="text-danger">' + json['error'][i] + '</div>');
+                        }
+                      }
+
+                      // Highlight any found errors
+                      $('.text-danger').parentsUntil('.form-group').parent().addClass('has-error');
+                    } else {
+                      $('input[name=\'amount\']').attr('value', '<?php echo addslashes($credit_min); ?>');
+
+                      // Refresh products, credits and totals
+                      $('#button-refresh').trigger('click');
+                    }
+                  },
+                  error: function(xhr, ajaxOptions, thrownError) {
+                    alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+                  }
+                });
+              });
+
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+              // Reward
+          ]]></search>
+          <add position="before"><![CDATA[
+              // Credit
+              $('#button-credit').on('click', function() {
+                $.ajax({
+                  url: 'index.php?route=sale/order/api&token=<?php echo $token; ?>&api=api/credit&store_id=' + $('select[name=\'store_id\'] option:selected').val(),
+                  type: 'post',
+                  data: $('input[name=\'credit\']'),
+                  dataType: 'json',
+                  beforeSend: function() {
+                    $('#button-credit').button('loading');
+                  },
+                  complete: function() {
+                    $('#button-credit').button('reset');
+                  },
+                  success: function(json) {
+                    $('.alert, .text-danger').remove();
+                    $('.form-group').removeClass('has-error');
+
+                    if (json['error']) {
+                      $('#content > .container-fluid').prepend('<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' + json['error'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+                      // Highlight any found errors
+                      $('input[name=\'credit\']').parent().parent().parent().addClass('has-error');
+                    }
+
+                    if (json['success']) {
+                      $('#content > .container-fluid').prepend('<div class="alert alert-success"><i class="fa fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+                      // Refresh products, vouchers and totals
+                      $('#button-refresh').trigger('click');
+                    }
+                  },
+                  error: function(xhr, ajaxOptions, thrownError) {
+                    alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+                  }
+                });
+              });
+
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/spanish/spanish.php">
+      <operation>
+          <search><![CDATA[
+            $_['button_voucher']                = 'Aplicar Vale Regalo';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['button_credit']                 = 'Aplicar Crédito';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['tab_voucher']                   = 'Vale Regalo';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['tab_credit']                    = 'Crédito';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['button_voucher_add']            = 'Añadir +';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['button_credit_add']             = 'Añadir +';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/english/english.php">
+      <operation>
+          <search><![CDATA[
+            $_['tab_voucher']                   = 'Vouchers';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['tab_credit']                    = 'Credits';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['button_voucher_add']            = 'Add Voucher';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['button_credit_add']             = 'Add Credit';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/controller/account/account.php">
+      <operation>
+          <search><![CDATA[
+            $data['text_recurring'] = $this->language->get('text_recurring');
+          ]]></search>
+          <add position="after"><![CDATA[
+            $data['text_credit'] = $this->language->get('text_credit');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $data['recurring'] = $this->url->link('account/recurring', '', 'SSL');
+          ]]></search>
+          <add position="after"><![CDATA[
+            $data['credit'] = $this->url->link('account/credit', '', 'SSL');
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/language/spanish/account/account.php">
+      <operation>
+          <search><![CDATA[
+            $_['text_transactions']  = 'Transacciones';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['text_credit']        = 'Compra de Créditos';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/language/english/account/account.php">
+      <operation>
+          <search><![CDATA[
+            $_['text_transaction']   = 'Your Transactions';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['text_credit']        = 'Credit Purchase';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="catalog/view/theme/default/template/account/account.tpl">
+      <operation>
+          <search><![CDATA[
+            <li><a href="<?php echo $recurring; ?>"><?php echo $text_recurring; ?></a></li>
+          ]]></search>
+          <add position="after"><![CDATA[
+            <li><a href="<?php echo $credit; ?>"><?php echo $text_credit; ?></a></li>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/controller/setting/setting.php">
+      <operation>
+          <search><![CDATA[
+            $data['text_voucher'] = $this->language->get('text_voucher');
+          ]]></search>
+          <add position="after"><![CDATA[
+            $data['text_credit'] = $this->language->get('text_credit');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $data['entry_voucher_max'] = $this->language->get('entry_voucher_max');
+          ]]></search>
+          <add position="after"><![CDATA[
+            $data['entry_credit_min'] = $this->language->get('entry_credit_min');
+            $data['entry_credit_max'] = $this->language->get('entry_credit_max');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $data['help_voucher_max'] = $this->language->get('help_voucher_max');
+          ]]></search>
+          <add position="after"><![CDATA[
+            $data['help_credit_min'] = $this->language->get('help_credit_min');
+            $data['help_credit_max'] = $this->language->get('help_credit_max');
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            if (isset($this->error['processing_status'])) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            if (isset($this->error['credit_min'])) {
+        			$data['error_credit_min'] = $this->error['credit_min'];
+        		} else {
+        			$data['error_credit_min'] = '';
+        		}
+
+        		if (isset($this->error['credit_max'])) {
+        			$data['error_credit_max'] = $this->error['credit_max'];
+        		} else {
+        			$data['error_credit_max'] = '';
+        		}
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            if (isset($this->request->post['config_tax'])) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            if (isset($this->request->post['config_credit_min'])) {
+        			$data['config_credit_min'] = $this->request->post['config_credit_min'];
+        		} else {
+        			$data['config_credit_min'] = $this->config->get('config_credit_min');
+        		}
+
+        		if (isset($this->request->post['config_credit_max'])) {
+        			$data['config_credit_max'] = $this->request->post['config_credit_max'];
+        		} else {
+        			$data['config_credit_max'] = $this->config->get('config_credit_max');
+        		}
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            if (!isset($this->request->post['config_processing_status'])) {
+          ]]></search>
+          <add position="before"><![CDATA[
+            if (!$this->request->post['config_credit_min']) {
+        			$this->error['credit_min'] = $this->language->get('error_credit_min');
+        		}
+
+        		if (!$this->request->post['config_credit_max']) {
+        			$this->error['credit_max'] = $this->language->get('error_credit_max');
+        		}
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/view/template/setting/setting.tpl">
+      <operation>
+          <search><![CDATA[
+            <legend><?php echo $text_tax; ?></legend>
+          ]]></search>
+          <add position="before" offset="1"><![CDATA[
+            <fieldset>
+                <legend><?php echo $text_credit; ?></legend>
+                <div class="form-group required">
+                  <label class="col-sm-2 control-label" for="input-credit-min"><span data-toggle="tooltip" title="<?php echo $help_credit_min; ?>"><?php echo $entry_credit_min; ?></span></label>
+                  <div class="col-sm-10">
+                    <input type="text" name="config_credit_min" value="<?php echo $config_credit_min; ?>" placeholder="<?php echo $entry_credit_min; ?>" id="input-credit-min" class="form-control" />
+                    <?php if ($error_credit_min) { ?>
+                    <div class="text-danger"><?php echo $error_credit_min; ?></div>
+                    <?php } ?>
+                  </div>
+                </div>
+                <div class="form-group required">
+                  <label class="col-sm-2 control-label" for="input-credit-max"><span data-toggle="tooltip" title="<?php echo $help_credit_max; ?>"><?php echo $entry_credit_max; ?></span></label>
+                  <div class="col-sm-10">
+                    <input type="text" name="config_credit_max" value="<?php echo $config_credit_max; ?>" placeholder="<?php echo $entry_credit_max; ?>" id="input-credit-max" class="form-control" />
+                    <?php if ($error_credit_max) { ?>
+                    <div class="text-danger"><?php echo $error_credit_max; ?></div>
+                    <?php } ?>
+                  </div>
+                </div>
+              </fieldset>
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/spanish/setting/setting.php">
+      <operation>
+          <search><![CDATA[
+            $_['text_voucher']                     = 'Certificados de Regalos';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['text_credit']                      = 'Créditos';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['entry_voucher_max']                = 'Monto máximo Certificado:';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['entry_credit_min']                = 'Monto mínimo:';
+            $_['entry_credit_max']                = 'Monto máximo:';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['help_voucher_max']                 = 'Cantidad máxima para compra de Bono de regalo.';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['help_credit_min']                  = 'Cantidad mínima para compra de Crédito.';
+            $_['help_credit_max']                  = 'Cantidad máxima para compra de Crédito.';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['error_voucher_max']                = 'Monto máximo del Certificado requerido!';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['error_credit_min']                = 'Monto mínimo del Crédito requerido!';
+            $_['error_credit_max']                = 'Monto máximo del Crédito requerido!';
+          ]]></add>
+      </operation>
+    </file>
+    <file path="admin/language/english/setting/setting.php">
+      <operation>
+          <search><![CDATA[
+            $_['text_voucher']                     = 'Vouchers';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['text_credit']                      = 'Credits';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['entry_voucher_max']                = 'Voucher Max';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['entry_credit_min']                = 'Credit Min';
+            $_['entry_credit_max']                = 'Credit Max';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['help_voucher_max']                 = 'Maximum amount a customer can purchase a voucher for.';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['help_credit_min']                  = 'Minimum amount a customer can purchase credits.';
+            $_['help_credit_max']                  = 'Maximum amount a customer can purchase credits.';
+          ]]></add>
+      </operation>
+      <operation>
+          <search><![CDATA[
+            $_['error_voucher_max']                = 'Maximum voucher amount required!';
+          ]]></search>
+          <add position="after"><![CDATA[
+            $_['error_credit_min']                 = 'Minimum credit amount required!';
+            $_['error_credit_max']                 = 'Maximum credit amount required!';
+          ]]></add>
+      </operation>
+    </file>
+</modification>
