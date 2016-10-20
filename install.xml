@@ -3,7 +3,7 @@
     <name>Compra de Créditos por la Tienda</name>
     <version>1.0</version>
     <author>jeoxs</author>
-    <code>tscp</code>
+    <code>jcp</code>
     <link>https://github.com/Jeoxs/Opencart-Credit-Purchase/</link>
     <file path="catalog/controller/common/cart.php">
         <operation>
