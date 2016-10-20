@@ -2,9 +2,9 @@
 <modification>
     <name>Compra de Créditos por la Tienda</name>
     <version>1.0</version>
-    <author>Tecniservicio 3000 C.A.</author>
+    <author>jeoxs</author>
     <code>tscp</code>
-    <link>http://www.opencart.com</link>
+    <link>https://github.com/Jeoxs/Opencart-Credit-Purchase/</link>
     <file path="catalog/controller/common/cart.php">
         <operation>
             <search><![CDATA[
